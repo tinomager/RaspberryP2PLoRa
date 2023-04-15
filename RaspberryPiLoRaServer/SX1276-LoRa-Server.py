@@ -4,6 +4,7 @@ from SX127x.board_config import BOARD
 import configparser
 from azure.iot.device import IoTHubDeviceClient, Message
 import json
+import re
 
 BOARD.setup()
 
@@ -32,10 +33,10 @@ class LoRaRcvCont(LoRa):
 
     def parse_payload(self, payload_string):
         try:
-            payload_trimmed = payload_string[:9]
+            payload_trimmed = payload_string[:11]
             parts =  payload_trimmed.split(';')
-            temp = parts[0]
-            hum = parts[1]
+            temp = re.sub("\u0000", "", parts[0])
+            hum = re.sub("\u0000", "", parts[1])
             print(f'Temperature: {temp}')
             print(f'Humidity: {hum}')
             return temp, hum
@@ -47,6 +48,7 @@ class LoRaRcvCont(LoRa):
         obj = { "temp" : temp, "hum" : hum}
         message = Message(json.dumps(obj))
         self.iot_hub_device_client.send_message(message)
+        print(f'Message sent to IoT Hub: {message}')
         return True
 
     def on_rx_done(self):
@@ -58,6 +60,7 @@ class LoRaRcvCont(LoRa):
         payload_str = bytes(payload).decode("utf-8",'ignore')
         print(payload_str)
         temp, hum = self.parse_payload(payload_str)
+        self.send_to_iothub(temp, hum)
         self.set_mode(MODE.SLEEP)
         self.reset_ptr_rx()
         self.set_mode(MODE.RXCONT) 
