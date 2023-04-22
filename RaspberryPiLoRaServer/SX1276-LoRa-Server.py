@@ -59,11 +59,25 @@ class LoRaRcvCont(LoRa):
         payload = self.read_payload(nocheck=True)
         payload_str = bytes(payload).decode("utf-8",'ignore')
         print(payload_str)
+        #send ACK
+        payload_ack = payload_str + ';ACK'
+        sleep(2)
+        payload_ack_encode = payload_ack.encode()
+        self.write_payload(list(bytearray(payload_ack_encode)))
+        self.set_mode(MODE.TX)
+        
+        print('Sent ACK: '+payload_ack)
         temp, hum = self.parse_payload(payload_str)
         self.send_to_iothub(temp, hum)
-        self.set_mode(MODE.SLEEP)
+        print('Sent to IoT Hub')
+        #self.set_mode(MODE.SLEEP)
+        sleep(2)
         self.reset_ptr_rx()
         self.set_mode(MODE.RXCONT) 
+
+    def on_tx_done(self):
+        print("\nTxDone")
+        print(self.get_irq_flags())
 
 
 lora = LoRaRcvCont(verbose=False)
